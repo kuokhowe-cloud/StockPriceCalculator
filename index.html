@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Stock 5-Year Return Calculator</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      margin: 0;
+      padding: 16px;
+      background: #f9f9fb;
+      color: #333;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 24px;
+      font-size: 1.6rem;
+    }
+    .scenario {
+      max-width: 600px;
+      margin: 0 auto;
+      background: white;
+      padding: 24px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    }
+    label {
+      display: block;
+      margin-top: 18px;
+      font-size: 0.95rem;
+    }
+    input {
+      width: 100%;
+      padding: 10px;
+      margin-top: 6px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 1rem;
+      background-color: #f0f8ff; /* Highlighted input */
+    }
+    input:focus {
+      outline: none;
+      border-color: #007bff;
+      box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
+    }
+    .price-status {
+      font-size: 0.85rem;
+      color: #666;
+      margin-top: 4px;
+    }
+    .result-box {
+      margin-top: 24px;
+      padding: 18px;
+      background: #f0f8ff;
+      border-radius: 8px;
+      display: none;
+    }
+    .result-box h3 {
+      margin-top: 0;
+      font-size: 1.2rem;
+      color: #007bff;
+    }
+    .result-value {
+      font-weight: bold;
+      font-size: 1.15rem;
+      color: #0d6efd;
+    }
+  </style>
+</head>
+<body>
+  <h1>Stock 5-Year Return Calculator</h1>
+
+  <div class="scenario">
+    <label>Ticker (e.g. NFLX): <input type="text" id="ticker" value="NFLX"></label>
+    
+    <label>Current Price ($): 
+      <input type="number" id="price" value="1210.61" step="0.01">
+    </label>
+
+    <label>LTM EPS ($): 
+      <input type="number" id="eps" value="23.49" step="0.01">
+    </label>
+
+    <div class="price-status" id="status">Enter ticker and press Enter to fetch price</div>
+
+    <label>EPS Growth Rate (% per year): 
+      <input type="number" id="growth" value="20" step="0.1">
+    </label>
+
+    <label>Future P/E Ratio (in 5 years): 
+      <input type="number" id="pe" value="40" step="0.1">
+    </label>
+    
+    <div id="result" class="result-box">
+      <!-- Company name will appear here -->
+      <h3 id="resultTitle">5-Year Projection</h3>
+      <p>EPS in Year 5: <span class="result-value" id="eps5"></span></p>
+      <p>Price in Year 5: <span class="result-value" id="price5"></span></p>
+      <p>Annualised Return: <span class="result-value" id="return"></span></p>
+    </div>
+  </div>
+
+  <script>
+    // 🔑 Your Finnhub API Key
+    const FINNHUB_KEY = 'd4k20shr01qgcb10am5gd4k20shr01qgcb10am60';
+
+    async function fetchPriceAndName(ticker) {
+      const statusEl = document.getElementById('status');
+      const priceEl = document.getElementById('price');
+      const resultTitle = document.getElementById('resultTitle');
+      
+      if (!ticker.trim()) {
+        statusEl.textContent = 'Enter a ticker symbol';
+        resultTitle.textContent = '5-Year Projection';
+        return;
+      }
+
+      const symbol = ticker.toUpperCase();
+      statusEl.textContent = 'Fetching data...';
+
+      try {
+        // Fetch company profile (for name)
+        const profileRes = await fetch(
+          `https://finnhub.io/api/v1/stock/profile2?symbol=${encodeURIComponent(symbol)}&token=${FINNHUB_KEY}`
+        );
+        const profile = await profileRes.json();
+        const companyName = profile.name || symbol;
+
+        // Fetch price
+        const quoteRes = await fetch(
+          `https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(symbol)}&token=${FINNHUB_KEY}`
+        );
+        const quote = await quoteRes.json();
+
+        if (quote.c && quote.c > 0) {
+          priceEl.value = quote.c.toFixed(2);
+          const now = new Date();
+          statusEl.textContent = `Data for ${companyName} • ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+          resultTitle.textContent = `${companyName} – 5-Year Projection`;
+          calculate();
+        } else {
+          statusEl.textContent = 'Price not found. Check ticker.';
+          resultTitle.textContent = '5-Year Projection';
+        }
+      } catch (err) {
+        statusEl.textContent = 'Error fetching data';
+        document.getElementById('resultTitle').textContent = '5-Year Projection';
+        console.error('Fetch error:', err);
+      }
+    }
+
+    function setupListeners() {
+      const tickerInput = document.getElementById('ticker');
+      tickerInput.addEventListener('change', (e) => fetchPriceAndName(e.target.value));
+      tickerInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+          fetchPriceAndName(e.target.value);
+          e.target.blur();
+        }
+      });
+
+      // Auto-calculate on input change
+      ['price', 'eps', 'growth', 'pe'].forEach(id => {
+        document.getElementById(id).addEventListener('input', calculate);
+      });
+    }
+
+    function calculate() {
+      const currentPrice = parseFloat(document.getElementById('price').value);
+      const ltmEps = parseFloat(document.getElementById('eps').value);
+      const growthRate = parseFloat(document.getElementById('growth').value) / 100;
+      const futurePe = parseFloat(document.getElementById('pe').value);
+
+      const resultBox = document.getElementById('result');
+      const eps5El = document.getElementById('eps5');
+      const price5El = document.getElementById('price5');
+      const returnEl = document.getElementById('return');
+
+      if (isNaN(currentPrice) || isNaN(ltmEps) || isNaN(growthRate) || isNaN(futurePe)) {
+        resultBox.style.display = 'none';
+        return;
+      }
+
+      const eps5 = ltmEps * Math.pow(1 + growthRate, 5);
+      const price5 = eps5 * futurePe;
+      const annualReturn = Math.pow(price5 / currentPrice, 1/5) - 1;
+
+      eps5El.textContent = eps5.toFixed(2);
+      price5El.textContent = price5.toLocaleString(undefined, {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      });
+      returnEl.textContent = (annualReturn * 100).toFixed(2) + '%';
+      resultBox.style.display = 'block';
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      setupListeners();
+      calculate();
+    });
+  </script>
+</body>
+</html>
