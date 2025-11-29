@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Stock Return Comparison (Auto-Calc)</title>
+  <title>Stock 5-Year Return Calculator</title>
   <style>
     * { box-sizing: border-box; }
     body {
@@ -18,163 +18,175 @@
       margin-bottom: 24px;
       font-size: 1.6rem;
     }
-    .container {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 20px;
-      justify-content: space-between;
-    }
     .scenario {
-      flex: 1;
-      min-width: 280px;
+      max-width: 600px;
+      margin: 0 auto;
       background: white;
-      padding: 20px;
+      padding: 24px;
       border-radius: 12px;
       box-shadow: 0 4px 12px rgba(0,0,0,0.08);
     }
-    .scenario h2 {
-      margin-top: 0;
-      font-size: 1.25rem;
-      color: #007bff;
-      text-align: center;
-    }
     label {
       display: block;
-      margin-top: 16px;
+      margin-top: 18px;
       font-size: 0.95rem;
     }
     input {
       width: 100%;
       padding: 10px;
       margin-top: 6px;
-      border: 1px solid #ddd;
+      border: 1px solid #ccc;
       border-radius: 6px;
       font-size: 1rem;
+      background-color: #f0f8ff; /* 🔵 Highlighted input background */
+    }
+    input:focus {
+      outline: none;
+      border-color: #007bff;
+      box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
+    }
+    .price-status {
+      font-size: 0.85rem;
+      color: #666;
+      margin-top: 4px;
     }
     .result-box {
-      margin-top: 20px;
-      padding: 16px;
+      margin-top: 24px;
+      padding: 18px;
       background: #f0f8ff;
       border-radius: 8px;
       display: none;
     }
     .result-box h3 {
       margin-top: 0;
-      font-size: 1.1rem;
+      font-size: 1.2rem;
+      color: #007bff;
     }
     .result-value {
       font-weight: bold;
-      font-size: 1.1rem;
+      font-size: 1.15rem;
       color: #0d6efd;
-    }
-    @media (max-width: 600px) {
-      .container {
-        flex-direction: column;
-      }
     }
   </style>
 </head>
 <body>
-  <h1>Stock 5-Year Return Comparison</h1>
+  <h1>Stock 5-Year Return Calculator</h1>
 
-  <div class="container">
-    <!-- Scenario A -->
-    <div class="scenario">
-      <h2>Scenario A</h2>
-      <label>Stock Name: <input type="text" id="nameA" value="Netflix – Optimistic"></label>
-      <label>Current Price ($): <input type="number" id="priceA" value="1210.61" step="0.01"></label>
-      <label>LTM EPS ($): <input type="number" id="epsA" value="23.49" step="0.01"></label>
-      <label>EPS Growth Rate (%): <input type="number" id="growthA" value="20" step="0.1"></label>
-      <label>Future P/E Ratio: <input type="number" id="peA" value="40" step="0.1"></label>
-      
-      <div id="resultA" class="result-box">
-        <h3><span id="nameOutA">Netflix – Optimistic</span> Results</h3>
-        <p>EPS in Year 5: <span class="result-value" id="eps5A">58.45</span></p>
-        <p>Price in Year 5: <span class="result-value" id="price5A">2,338.03</span></p>
-        <p>Annualised Return: <span class="result-value" id="returnA">14.07%</span></p>
-      </div>
-    </div>
+  <div class="scenario">
+    <label>Ticker (e.g. NFLX): <input type="text" id="ticker" value="NFLX"></label>
+    
+    <label>Current Price ($): 
+      <input type="number" id="price" value="1210.61" step="0.01">
+    </label>
 
-    <!-- Scenario B -->
-    <div class="scenario">
-      <h2>Scenario B</h2>
-      <label>Stock Name: <input type="text" id="nameB" value="Netflix – Conservative"></label>
-      <label>Current Price ($): <input type="number" id="priceB" value="1210.61" step="0.01"></label>
-      <label>LTM EPS ($): <input type="number" id="epsB" value="23.49" step="0.01"></label>
-      <label>EPS Growth Rate (%): <input type="number" id="growthB" value="15" step="0.1"></label>
-      <label>Future P/E Ratio: <input type="number" id="peB" value="30" step="0.1"></label>
-      
-      <div id="resultB" class="result-box">
-        <h3><span id="nameOutB">Netflix – Conservative</span> Results</h3>
-        <p>EPS in Year 5: <span class="result-value" id="eps5B">47.25</span></p>
-        <p>Price in Year 5: <span class="result-value" id="price5B">1,417.40</span></p>
-        <p>Annualised Return: <span class="result-value" id="returnB">3.20%</span></p>
-      </div>
+    <label>LTM EPS ($): 
+      <input type="number" id="eps" value="23.49" step="0.01">
+    </label>
+
+    <div class="price-status" id="status">Enter ticker and press Enter to fetch live price</div>
+
+    <label>EPS Growth Rate (% per year): 
+      <input type="number" id="growth" value="20" step="0.1">
+    </label>
+
+    <label>Future P/E Ratio (in 5 years): 
+      <input type="number" id="pe" value="40" step="0.1">
+    </label>
+    
+    <div id="result" class="result-box">
+      <h3>5-Year Projection</h3>
+      <p>EPS in Year 5: <span class="result-value" id="eps5"></span></p>
+      <p>Price in Year 5: <span class="result-value" id="price5"></span></p>
+      <p>Annualised Return: <span class="result-value" id="return"></span></p>
     </div>
   </div>
 
   <script>
-    // Auto-calculate on any input change
-    function setupAutoCalc(scenario) {
-      const fields = ['name', 'price', 'eps', 'growth', 'pe'];
-      fields.forEach(field => {
-        const el = document.getElementById(field + scenario);
-        if (el) {
-          el.addEventListener('input', () => calculate(scenario));
+    // 🔑 Your Finnhub API Key
+    const FINNHUB_KEY = 'd4k20shr01qgcb10am5gd4k20shr01qgcb10am60';
+
+    async function fetchPrice(ticker) {
+      const statusEl = document.getElementById('status');
+      const priceEl = document.getElementById('price');
+      
+      if (!ticker.trim()) {
+        statusEl.textContent = 'Enter a ticker symbol';
+        return;
+      }
+
+      const symbol = ticker.toUpperCase();
+      statusEl.textContent = 'Fetching live price...';
+
+      try {
+        const response = await fetch(
+          `https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(symbol)}&token=${FINNHUB_KEY}`
+        );
+        const data = await response.json();
+
+        if (data.c && data.c > 0) {
+          priceEl.value = data.c.toFixed(2);
+          const now = new Date();
+          statusEl.textContent = `Live price • ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+          calculate();
+        } else {
+          statusEl.textContent = 'Price not found. Check ticker.';
         }
+      } catch (err) {
+        statusEl.textContent = 'Error fetching price';
+        console.error('Fetch error:', err);
+      }
+    }
+
+    function setupListeners() {
+      // Fetch price on Enter or blur
+      const tickerInput = document.getElementById('ticker');
+      tickerInput.addEventListener('change', (e) => fetchPrice(e.target.value));
+      tickerInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+          fetchPrice(e.target.value);
+          e.target.blur();
+        }
+      });
+
+      // Auto-calculate on any input change
+      ['price', 'eps', 'growth', 'pe'].forEach(id => {
+        document.getElementById(id).addEventListener('input', calculate);
       });
     }
 
-    function calculate(scenario) {
-      const prefix = scenario;
-      const nameInput = document.getElementById(`name${prefix}`);
-      const name = nameInput ? nameInput.value || `Scenario ${prefix}` : `Scenario ${prefix}`;
+    function calculate() {
+      const currentPrice = parseFloat(document.getElementById('price').value);
+      const ltmEps = parseFloat(document.getElementById('eps').value);
+      const growthRate = parseFloat(document.getElementById('growth').value) / 100;
+      const futurePe = parseFloat(document.getElementById('pe').value);
 
-      const currentPrice = parseFloat(document.getElementById(`price${prefix}`).value);
-      const ltmEps = parseFloat(document.getElementById(`eps${prefix}`).value);
-      const growthRate = parseFloat(document.getElementById(`growth${prefix}`).value) / 100;
-      const futurePe = parseFloat(document.getElementById(`pe${prefix}`).value);
+      const resultBox = document.getElementById('result');
+      const eps5El = document.getElementById('eps5');
+      const price5El = document.getElementById('price5');
+      const returnEl = document.getElementById('return');
 
-      const resultBox = document.getElementById(`result${prefix}`);
-      const nameOut = document.getElementById(`nameOut${prefix}`);
-      const eps5El = document.getElementById(`eps5${prefix}`);
-      const price5El = document.getElementById(`price5${prefix}`);
-      const returnEl = document.getElementById(`return${prefix}`);
-
-      // Update name first
-      if (nameOut) nameOut.textContent = name;
-
-      // Validate numbers
       if (isNaN(currentPrice) || isNaN(ltmEps) || isNaN(growthRate) || isNaN(futurePe)) {
         resultBox.style.display = 'none';
         return;
       }
 
-      // Perform calculations
+      // Formulas from your Excel sheet
       const eps5 = ltmEps * Math.pow(1 + growthRate, 5);
       const price5 = eps5 * futurePe;
       const annualReturn = Math.pow(price5 / currentPrice, 1/5) - 1;
 
-      // Update results
       eps5El.textContent = eps5.toFixed(2);
       price5El.textContent = price5.toLocaleString(undefined, {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2
       });
       returnEl.textContent = (annualReturn * 100).toFixed(2) + '%';
-
-      // Show result box
       resultBox.style.display = 'block';
     }
 
-    // Initialize auto-calc for both scenarios
     document.addEventListener('DOMContentLoaded', () => {
-      setupAutoCalc('A');
-      setupAutoCalc('B');
-
-      // Run initial calculation
-      calculate('A');
-      calculate('B');
+      setupListeners();
+      calculate(); // Initial calculation
     });
   </script>
 </body>
